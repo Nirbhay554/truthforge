@@ -20,8 +20,8 @@ class BrightDataClient:
         self.zone_serp = os.getenv("BRIGHT_DATA_ZONE_SERP", "serp_api1")
         self.zone_unlocker = os.getenv("BRIGHT_DATA_ZONE_UNLOCKER", "web_unlocker1")
 
-        if not self.api_key:
-            raise ValueError("BRIGHT_DATA_API_KEY not found in environment")
+        if not self.api_key or "your_bright_data_token_here" in self.api_key:
+            logger.warning("BRIGHT_DATA_API_KEY not configured in environment.")
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=2, max=6))
     async def search_serp(self, query: str, engine: str = "google") -> str:

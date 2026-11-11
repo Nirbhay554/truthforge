@@ -37,19 +37,35 @@ from bright_data_client import bright_data
 from aiml_client import aiml_chat
 
 # ── Sentry setup ──────────────────────────────────────────────────────────────
-sentry_sdk.init(
-    dsn=os.getenv("SENTRY_DSN_BACKEND"),
-    traces_sample_rate=1.0,
-)
+sentry_dsn = os.getenv("SENTRY_DSN_BACKEND")
+if sentry_dsn and "your_key" not in sentry_dsn:
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        traces_sample_rate=1.0,
+    )
 
 # ── Supabase client ───────────────────────────────────────────────────────────
-supabase: Client = create_client(
-    os.getenv("SUPABASE_URL"),
-    os.getenv("SUPABASE_KEY"),
-)
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+supabase: Client = None
+if supabase_url and supabase_key and "your_service_role_key_here" not in supabase_key and "your-project-id" not in supabase_url:
+    try:
+        supabase = create_client(supabase_url, supabase_key)
+    except Exception as e:
+        logger.warning(f"Could not connect to Supabase: {e}")
+else:
+    logger.warning("Supabase credentials not configured in .env.")
 
 # ── Groq client ───────────────────────────────────────────────────────────────
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+groq_key = os.getenv("GROQ_API_KEY")
+groq_client = None
+if groq_key and "your_groq_api_key_here" not in groq_key:
+    try:
+        groq_client = Groq(api_key=groq_key)
+    except Exception as e:
+        logger.warning(f"Could not initialize Groq client: {e}")
+else:
+    logger.warning("GROQ_API_KEY not configured in .env.")
 
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 app = FastAPI(
