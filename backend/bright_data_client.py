@@ -29,6 +29,8 @@ class BrightDataClient:
         Search Google/Bing via Bright Data SERP API.
         Returns raw HTML results.
         """
+        if not self.api_key or "your_bright_data_token_here" in self.api_key:
+            return ""
         search_url = f"https://www.google.com/search?q={query.replace(' ', '+')}"
 
         headers = {
@@ -58,6 +60,8 @@ class BrightDataClient:
         Fetch any URL via Bright Data Web Unlocker.
         Bypasses bot detection, CAPTCHAs, and geo-blocks.
         """
+        if not self.api_key or "your_bright_data_token_here" in self.api_key:
+            return ""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
