@@ -346,7 +346,7 @@ Get all score drop alerts
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/Kanhaiya76618/truthforge.git
+git clone https://github.com/Nirbhay554/truthforge.git
 cd truthforge
 ```
 
@@ -580,15 +580,15 @@ Company name
 **Web Data UNLOCKED Hackathon 2026**
 by lablab.ai × Bright Data
 
-Built **solo** in **under 5 days** by Kanhaiya Kumar.
+Built **solo** in **under 5 days** by Nirbhay Singh.
 
 ---
 
 ## Connect
 
 - **Live Demo:** [truthforge-iota.vercel.app](https://truthforge-iota.vercel.app)
-- **GitHub:** [github.com/Kanhaiya76618/truthforge](https://github.com/Kanhaiya76618/truthforge)
-- **Discord:** kanhaiya9650
+- **GitHub:** [github.com/Nirbhay554/truthforge](https://github.com/Nirbhay554/truthforge)
+- **Discord:** nirbhay554
 - **API Docs:** [truthforge-production.up.railway.app/docs](https://truthforge-production.up.railway.app/docs)
 
 ---
