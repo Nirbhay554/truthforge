@@ -18,10 +18,29 @@ class BrightDataClient:
         self.serp_url = os.getenv("BRIGHT_DATA_SERP_URL", "https://api.brightdata.com/request")
         self.unlocker_url = os.getenv("BRIGHT_DATA_UNLOCKER_URL", "https://api.brightdata.com/request")
         self.zone_serp = os.getenv("BRIGHT_DATA_ZONE_SERP", "serp_api1")
-        self.zone_unlocker = os.getenv("BRIGHT_DATA_ZONE_UNLOCKER", "web_unlocker1")
+        self.zone_unlocker = os.getenv("BRIGHT_DATA_ZONE_UNLOCKER", "scraping_browser1")
+        self.browser_ws = os.getenv("BRIGHT_DATA_BROWSER_WS")
 
         if not self.api_key or "your_bright_data_token_here" in self.api_key:
             logger.warning("BRIGHT_DATA_API_KEY not configured in environment.")
+
+    async def fetch_page_with_browser(self, url: str) -> str:
+        """Fetch full JS-rendered page via Bright Data Scraping Browser over CDP."""
+        if not self.browser_ws or "**********" in self.browser_ws or "your_password" in self.browser_ws:
+            return ""
+        try:
+            from playwright.async_api import async_playwright
+            async with async_playwright() as p:
+                browser = await p.chromium.connect_over_cdp(self.browser_ws)
+                page = await browser.new_page()
+                await page.goto(url, timeout=20000, wait_until="domcontentloaded")
+                content = await page.content()
+                await browser.close()
+                logger.info(f"Bright Data Scraping Browser fetched: {url} ({len(content)} chars)")
+                return content
+        except Exception as e:
+            logger.warning(f"Bright Data Scraping Browser failed for {url}: {e}")
+            return ""
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=2, max=6))
     async def search_serp(self, query: str, engine: str = "google") -> str:
@@ -45,23 +64,31 @@ class BrightDataClient:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(self.serp_url, headers=headers, json=payload)
+                if response.status_code == 400:
+                    logger.warning(f"Bright Data zone '{self.zone_serp}' not configured: {response.text.strip()}")
+                    return ""
                 response.raise_for_status()
                 logger.info(f"SERP search complete: '{query}' ({len(response.text)} chars)")
                 return response.text
         except Exception as e:
-            logger.error(f"SERP API error for '{query}': {e}")
-            raise
+            logger.warning(f"SERP search unavailable for '{query}': {e}")
+            return ""
 
-    @retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=1, min=2, max=4))
     async def unlock_url(self, url: str) -> str:
         """
-        Fetch any URL via Bright Data Web Unlocker.
+        Fetch any URL via Bright Data Web Unlocker or Scraping Browser.
         Bypasses bot detection, CAPTCHAs, and geo-blocks.
         """
         if not self.api_key or "your_bright_data_token_here" in self.api_key:
             return ""
+
+        # Try Scraping Browser CDP if configured
+        if self.browser_ws and "**********" not in self.browser_ws:
+            browser_html = await self.fetch_page_with_browser(url)
+            if browser_html:
+                return browser_html
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -76,12 +103,15 @@ class BrightDataClient:
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:
                 response = await client.post(self.unlocker_url, headers=headers, json=payload)
+                if response.status_code == 400:
+                    logger.warning(f"Bright Data zone '{self.zone_unlocker}' not configured: {response.text.strip()}")
+                    return ""
                 response.raise_for_status()
                 logger.info(f"Web Unlocker fetched: {url} ({len(response.text)} chars)")
                 return response.text
         except Exception as e:
-            logger.error(f"Web Unlocker error for {url}: {e}")
-            raise
+            logger.warning(f"Web Unlocker unavailable for {url}: {e}")
+            return ""
 
     async def search_news(self, company_name: str, keywords: Optional[str] = None) -> str:
         """Search for company news."""

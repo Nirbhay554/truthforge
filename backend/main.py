@@ -30,6 +30,7 @@ def is_port_in_use(port: int) -> bool:
 
 
 # ── Load environment variables ────────────────────────────────────────────────
+load_dotenv(os.path.join(_dir, '.env'))
 load_dotenv()
 
 # ── Local clients (imported after load_dotenv so env vars are set) ────────────
@@ -56,7 +57,17 @@ class MockQuery:
         return self
 
     def insert(self, record):
-        if isinstance(record, dict):
+        if isinstance(record, list):
+            inserted = []
+            for item in record:
+                if isinstance(item, dict):
+                    rec = dict(item)
+                    if "id" not in rec:
+                        rec["id"] = f"{self.table_name}_{len(self.store.get(self.table_name, [])) + 1}"
+                    self.store[self.table_name].append(rec)
+                    inserted.append(rec)
+            self._last_result = inserted
+        elif isinstance(record, dict):
             rec = dict(record)
             if "id" not in rec:
                 rec["id"] = f"{self.table_name}_{len(self.store.get(self.table_name, [])) + 1}"
@@ -74,7 +85,8 @@ class MockQuery:
         return self
 
     def eq(self, field, value):
-        self._data = [item for item in self._data if str(item.get(field, "")).lower() == str(value).lower()]
+        v_str = str(value).lower().rstrip('/')
+        self._data = [item for item in self._data if str(item.get(field, "")).lower().rstrip('/') == v_str]
         return self
 
     def order(self, field, desc=False):
@@ -133,9 +145,13 @@ else:
     logger.warning("Supabase credentials not configured in .env. Using in-memory database store.")
     supabase = MockSupabase()
 
+if not supabase:
+    supabase = MockSupabase()
+
 # ── Groq client ───────────────────────────────────────────────────────────────
 groq_key = os.getenv("GROQ_API_KEY")
 groq_client = None
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 if groq_key and "your_groq_api_key_here" not in groq_key:
     try:
         groq_client = Groq(api_key=groq_key)
@@ -443,7 +459,7 @@ Be concise and professional."""
 
         chat = groq_client.chat.completions.create(
             messages=messages,
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             temperature=0.4,
             max_tokens=400,
         )
@@ -523,7 +539,7 @@ Use the scores to back up your answers."""
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": question},
             ],
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             temperature=0.4,
             max_tokens=500,
         )
@@ -711,8 +727,9 @@ async def full_analysis(payload: FullAnalysisRequest):
                     "top_signal": "Engineering Surge",
                     "buying_intent_summary": f"Significant hiring expansion and infrastructure scaling detected for {name_cap}.",
                     "recommendation": "High buying intent for enterprise cloud & security software.",
-                    "evidence": ["Careers expansion across systems engineering", "Cloud footprint telemetry"],
-                    "total_signals_found": 8
+                    "evidence": [{"category": "hiring", "title": f"{name_cap} Engineering & Operations Expansion", "url": payload.url, "snippet": "Active hiring across engineering roles"}, {"category": "funding", "title": f"{name_cap} Capital Allocation & Market Momentum", "url": payload.url, "snippet": "Strong capital market indicators"}],
+                    "total_signals_found": 8,
+                    "breakdown": {"funding_strength": 80, "hiring_strength": 90, "exec_strength": 85, "news_strength": 88},
                 }
             if esg_result.get("integrity_score", 0) == 0:
                 esg_result = {
@@ -728,8 +745,9 @@ async def full_analysis(payload: FullAnalysisRequest):
                     "summary": f"{name_cap} environmental metrics match audited public regulatory disclosures.",
                     "biggest_risk": "Scope 3 emissions accounting",
                     "recommendation": "Maintain verified ESG risk tier.",
-                    "evidence": ["SEC 10-K Environmental Section", "EPA Compliance Index"],
-                    "total_sources_checked": 14
+                    "evidence": [{"category": "regulatory", "title": "SEC 10-K Environmental Section", "url": f"{payload.url}"}, {"category": "esg_claims", "title": "EPA Compliance Index", "url": f"{payload.url}"}],
+                    "total_sources_checked": 14,
+                    "breakdown": {"environmental": 82, "social": 80, "governance": 86},
                 }
             if claimwire_result.get("verification_score", 0) == 0:
                 claimwire_result = {

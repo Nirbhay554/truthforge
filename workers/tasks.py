@@ -26,10 +26,21 @@ from workers.celery_app import celery_app
 from supabase import create_client, Client
 
 # Initialize Supabase using same env vars as backend
-supabase: Client = create_client(
-    os.getenv("SUPABASE_URL"),
-    os.getenv("SUPABASE_KEY"),
-)
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+supabase: Client = None
+if supabase_url and supabase_key and "your_service_role_key_here" not in supabase_key and "your-project-id" not in supabase_url:
+    try:
+        supabase = create_client(supabase_url, supabase_key)
+    except Exception as e:
+        logger.warning(f"Could not connect to Supabase: {e}")
+
+if not supabase:
+    try:
+        from main import MockSupabase
+        supabase = MockSupabase()
+    except Exception:
+        supabase = None
 
 
 def run_async(coro):

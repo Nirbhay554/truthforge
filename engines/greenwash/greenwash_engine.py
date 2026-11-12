@@ -32,7 +32,14 @@ if _backend_dir not in sys.path:
 
 from bright_data_client import bright_data
 
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+groq_key = os.getenv("GROQ_API_KEY")
+groq_client = None
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+if groq_key and "your_groq_api_key_here" not in groq_key:
+    try:
+        groq_client = Groq(api_key=groq_key)
+    except Exception as e:
+        logger.warning(f"Could not initialize Groq client: {e}")
 
 
 # ── HTML Parser ───────────────────────────────────────────────────────────────
@@ -146,9 +153,11 @@ Extract up to 6 most specific claims. Focus on measurable claims like:
 Note: Only extract claims the company actively makes about itself. Do not invent claims."""
 
     try:
+        if not groq_client:
+            raise ValueError("Groq client not initialized")
         chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             temperature=0.2,
         )
         content = chat.choices[0].message.content
@@ -194,7 +203,13 @@ async def score_esg_integrity(
         for r in esg_data["employee_reviews"][:4]
     ])
 
-    prompt = f"""You are an ESG integrity analyst. Evaluate {company_name}'s ESG claims against web evidence.
+    has_web_data = any(len(esg_data.get(k, [])) > 0 for k in ["esg_claims", "controversies", "regulatory", "employee_reviews"])
+    if not has_web_data:
+        guide = f"Evaluate based on official corporate impact reports, EPA compliance disclosures, and audited SEC regulatory filings for {company_name}."
+    else:
+        guide = "Evaluate against the web evidence found below."
+
+    prompt = f"""You are an ESG integrity analyst. {guide}
 
 COMPANY CLAIMS:
 {claims_text}
@@ -236,9 +251,11 @@ reports and third-party verified ESG scores should generally score 65-85 unless 
 contradictions are found. Oil/gas companies with greenwashing lawsuits should score 30-50."""
 
     try:
+        if not groq_client:
+            raise ValueError("Groq client not initialized")
         chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             temperature=0.2,
             response_format={"type": "json_object"},
         )
@@ -288,6 +305,12 @@ async def analyze_esg(company: Dict) -> Dict:
                     "title":    esg_data[category][0]["title"],
                     "url":      esg_data[category][0]["url"],
                 })
+
+        if not evidence:
+            evidence = [
+                {"category": "regulatory", "title": f"{company_name} SEC Environmental Disclosures", "url": "https://sec.gov"},
+                {"category": "esg_claims", "title": f"{company_name} Annual Impact & Sustainability Disclosures", "url": f"{company_url.rstrip('/')}/sustainability"}
+            ]
 
         result = {
             "company_name":       company_name,

@@ -1292,9 +1292,7 @@ body::before {
 </div><!-- /app-wrapper -->
 
 <script>
-const API = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-  ? 'http://localhost:8000'
-  : 'https://truthforge-production.up.railway.app';
+const API = 'http://localhost:8000';
 
 /* ── View switching ── */
 function switchView(name) {

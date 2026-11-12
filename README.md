@@ -8,12 +8,9 @@
 ![Bright Data](https://img.shields.io/badge/Bright_Data-MCP-00E5FF?style=for-the-badge)
 ![Groq](https://img.shields.io/badge/Groq-Llama_3.3_70B-F59E0B?style=for-the-badge)
 ![AI/ML API](https://img.shields.io/badge/AI%2FML_API-GPT--4o-7C3AED?style=for-the-badge)
-![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?style=for-the-badge&logo=vercel)
-![Railway](https://img.shields.io/badge/Railway-Deployed-purple?style=for-the-badge)
-
 **AI-powered enterprise verification platform that cross-references every company claim against live web data.**
 
-[Live Demo](https://truthforge-iota.vercel.app) · [API Docs](https://truthforge-production.up.railway.app/docs) · [Pitch Deck](https://truthforge-iota.vercel.app/pitch.html) · [Whitepaper](https://truthforge-iota.vercel.app/whitepaper.html)
+[Pitch Deck](frontend/pitch.html) · [Technical Whitepaper](frontend/whitepaper.html)
 
 </div>
 
@@ -25,11 +22,11 @@ TruthForge is an autonomous enterprise verification intelligence platform. Enter
 
 > *"The web already knows which companies are telling the truth. TruthForge just asks it."*
 
-### Technical Whitepaper — [Truthforge Technical Whitepaper](https://truthforge-iota.vercel.app/whitepaper.html)
+### Technical Whitepaper — [Truthforge Technical Whitepaper](frontend/whitepaper.html)
 
 A deep technical dive into TruthForge's architecture — covering the three parallel AI engines, the SignalJobs hiring-intelligence layer, the Bright Data web data pipeline, the asyncio execution model, the TruthScore algorithm, and enterprise deployment considerations.
 
-### Pitch Deck — [Truthforge Pitch Deck](https://truthforge-iota.vercel.app/pitch.html)
+### Pitch Deck — [Truthforge Pitch Deck](frontend/pitch.html)
 
 An interactive presentation covering the problem, solution, three engines, SignalJobs, architecture, Bright Data integration, the production workers system, live results, industry applications, roadmap, and vision.
 
@@ -243,7 +240,7 @@ truthforge/
 
 ### Base URL
 ```
-https://truthforge-production.up.railway.app
+http://localhost:8000
 ```
 
 ### Endpoints
@@ -586,10 +583,9 @@ Built **solo** in **under 5 days** by Nirbhay Singh.
 
 ## Connect
 
-- **Live Demo:** [truthforge-iota.vercel.app](https://truthforge-iota.vercel.app)
 - **GitHub:** [github.com/Nirbhay554/truthforge](https://github.com/Nirbhay554/truthforge)
 - **Discord:** nirbhay554
-- **API Docs:** [truthforge-production.up.railway.app/docs](https://truthforge-production.up.railway.app/docs)
+- **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 

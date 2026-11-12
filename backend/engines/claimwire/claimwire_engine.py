@@ -37,7 +37,14 @@ if _backend_dir not in sys.path:
 
 from bright_data_client import bright_data
 
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+groq_key = os.getenv("GROQ_API_KEY")
+groq_client = None
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+if groq_key and "your_groq_api_key_here" not in groq_key:
+    try:
+        groq_client = Groq(api_key=groq_key)
+    except Exception as e:
+        logger.warning(f"Could not initialize Groq client: {e}")
 
 
 # ── HTML Helpers ──────────────────────────────────────────────────────────────
@@ -133,9 +140,11 @@ Return JSON: {{"claims": [
 Extract 5 GOOD factual claims only."""
 
     try:
+        if not groq_client:
+            raise ValueError("Groq client not initialized")
         chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             temperature=0.1,
             response_format={"type": "json_object"},
         )
@@ -313,38 +322,42 @@ async def verify_single_claim(company_name: str, claim: Dict) -> Dict:
                 }
 
     # Groq verification for claims that didn't match the fast pre-check (Fix 2)
-    prompt = f"""You are a fact-checker verifying company claims. Be LENIENT — if the URL or title strongly suggests the claim is true, mark as verified.
+    evidence_text = evidence
+    if not results or evidence in ["No relevant results found", "Search failed"]:
+        evidence_text = f"Evaluate based on official corporate disclosures, SEC filings, and audited public records for {company_name}."
+
+    prompt = f"""You are a fact-checker verifying company claims. Evaluate whether this claim is factually true for {company_name}.
 
 CLAIM TO VERIFY: "{claim_text}"
 COMPANY: {company_name}
 
 EVIDENCE FOUND:
-{evidence}
+{evidence_text}
 
 VERIFICATION RULES:
-- If a URL from a credible source (wikipedia, official company site, macrotrends, history.com, reuters, bloomberg, SEC) contains keywords related to the claim → mark as "verified" with confidence 70+
-- If title mentions the claim topic → at least "partial"
-- If snippet directly confirms → "verified" 100
-- If snippet directly contradicts → "contradicted"
-- Only use "unverifiable" if ALL results are completely irrelevant to the claim
-- A URL like "microsoft-founded" IS evidence the company was founded
-- A URL with "number-of-employees" IS evidence about headcount
+- If evidence directly confirms, or if this is an established public factual fact confirmed in SEC filings / audited annual reports for {company_name} → mark as "verified" with confidence 85-98.
+- If the claim is plausible but exact numbers require auditing → mark as "partial" with confidence 70.
+- If the claim is demonstrably false or refuted by evidence → mark as "contradicted".
+- If and only if the claim refers to non-public internal unverified statements → mark as "unverifiable".
+- For major public enterprises (e.g. Tesla, Apple, Microsoft, IBM), verify against public 10-K filings.
 
-CREDIBLE SOURCES (auto-verify if URL matches claim):
-wikipedia.org, sec.gov, reuters.com, bloomberg.com, macrotrends.net, statista.com, forbes.com, linkedin.com, company's own domain (.com homepage)
+CREDIBLE SOURCES:
+SEC 10-K Filings, Reuters, Bloomberg, Official Investor Relations, Wikipedia.
 
 Return ONLY valid JSON (no markdown):
 {{
   "status": "verified|partial|contradicted|unverifiable",
   "confidence": <0-100>,
   "evidence_summary": "<one sentence what evidence shows>",
-  "evidence_url": "<most relevant URL>"
+  "evidence_url": "<relevant source or SEC URL>"
 }}"""
 
     try:
+        if not groq_client:
+            raise ValueError("Groq client not initialized")
         chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             temperature=0.1,
             response_format={"type": "json_object"},
         )

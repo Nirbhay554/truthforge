@@ -29,7 +29,14 @@ _backend_dir = os.path.abspath(
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+groq_key = os.getenv("GROQ_API_KEY")
+groq_client = None
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+if groq_key and "your_groq_api_key_here" not in groq_key:
+    try:
+        groq_client = Groq(api_key=groq_key)
+    except Exception as e:
+        logger.warning(f"Could not initialize Groq client: {e}")
 
 
 # ── Weighted Score Calculator ─────────────────────────────────────────────────
@@ -130,9 +137,11 @@ Return ONLY valid JSON (no markdown):
 }}"""
 
     try:
+        if not groq_client:
+            raise ValueError("Groq client not initialized")
         chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             temperature=0.2,
             response_format={"type": "json_object"},
         )
